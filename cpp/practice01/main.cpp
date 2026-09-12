@@ -33,6 +33,13 @@ int main() try {
         WGPUTextureView targetView = wgpuTextureCreateView(surfaceTexture->texture, nullptr);
 
         // Frame rendering code goes here
+        WGPUCommandEncoderDescriptor encDesc = WGPU_COMMAND_ENCODER_DESCRIPTOR_INIT;
+        WGPUCommandEncoder enc = wgpuDeviceCreateCommandEncoder(app.device(), &encDesc);
+        WGPUCommandBufferDescriptor bufDesc = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
+        WGPUCommandBuffer buf = wgpuCommandEncoderFinish(enc, &bufDesc);
+        wgpuQueueSubmit(app.queue(), 1, &buf);
+        wgpuCommandBufferRelease(buf);
+        wgpuCommandEncoderRelease(enc);
 
         wgpuTextureViewRelease(targetView);
 
