@@ -35,9 +35,26 @@ int main() try {
         // Frame rendering code goes here
         WGPUCommandEncoderDescriptor encDesc = WGPU_COMMAND_ENCODER_DESCRIPTOR_INIT;
         WGPUCommandEncoder enc = wgpuDeviceCreateCommandEncoder(app.device(), &encDesc);
+        
+        WGPURenderPassColorAttachment passAtt = WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
+        passAtt.view = targetView;
+        passAtt.loadOp = WGPULoadOp_Clear;
+        passAtt.storeOp = WGPUStoreOp_Store;
+        passAtt.clearValue = WGPUColor{0.5, 0.6, 0.7, 1.0};
+
+        WGPURenderPassDescriptor passDesc = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
+        passDesc.colorAttachmentCount = 1;
+        passDesc.colorAttachments = &passAtt;
+
+        WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(enc, &passDesc);
+        wgpuRenderPassEncoderEnd(pass);
+
         WGPUCommandBufferDescriptor bufDesc = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
         WGPUCommandBuffer buf = wgpuCommandEncoderFinish(enc, &bufDesc);
+
         wgpuQueueSubmit(app.queue(), 1, &buf);
+        
+        wgpuRenderPassEncoderRelease(pass);
         wgpuCommandBufferRelease(buf);
         wgpuCommandEncoderRelease(enc);
 
