@@ -12,6 +12,13 @@ static std::filesystem::path const projectRoot = PROJECT_ROOT;
 int main() try {
     WgpuApp app("Practice01", 1280, 720, false);
 
+    std::string shaderFile = loadFile(projectRoot / "shaders/shader.wgsl");
+    WGPUShaderSourceWGSL shaderSource = WGPU_SHADER_SOURCE_WGSL_INIT;
+    shaderSource.code = WGPUStringView{shaderFile.c_str(), shaderFile.size()};
+    WGPUShaderModuleDescriptor shaderModDesc = WGPU_SHADER_MODULE_DESCRIPTOR_INIT;
+    shaderModDesc.nextInChain = &shaderSource.chain;
+    WGPUShaderModule shaderMod = wgpuDeviceCreateShaderModule(app.device(), &shaderModDesc);
+
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -63,6 +70,7 @@ int main() try {
         wgpuSurfacePresent(app.surface());
         wgpuTextureRelease(surfaceTexture->texture);
     }
+    wgpuShaderModuleRelease(shaderMod);
 } catch (const std::exception & e) {
     std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
