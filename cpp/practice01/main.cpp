@@ -94,6 +94,7 @@ int main() try {
         wgpuTextureRelease(surfaceTexture->texture);
     }
     wgpuShaderModuleRelease(shaderMod);
+    wgpuRenderPipelineRelease(pipeline);
 } catch (const std::exception & e) {
     std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
