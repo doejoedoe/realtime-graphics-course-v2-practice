@@ -19,6 +19,27 @@ int main() try {
     shaderModDesc.nextInChain = &shaderSource.chain;
     WGPUShaderModule shaderMod = wgpuDeviceCreateShaderModule(app.device(), &shaderModDesc);
 
+    WGPUVertexState vertState = WGPU_VERTEX_STATE_INIT;
+    vertState.module = shaderMod;
+    vertState.entryPoint = WGPUStringView{"vertexMain", WGPU_STRLEN};
+
+    WGPUColorTargetState colorState = WGPU_COLOR_TARGET_STATE_INIT;
+    colorState.format = app.surfaceFormat();
+    colorState.writeMask = WGPUColorWriteMask_All;
+
+    WGPUFragmentState fragState = WGPU_FRAGMENT_STATE_INIT;
+    fragState.module = shaderMod;
+    fragState.entryPoint = WGPUStringView{"fragmentMain", WGPU_STRLEN};
+    fragState.targetCount = 1;
+    fragState.targets = &colorState;
+
+    WGPURenderPipelineDescriptor pipeDesc = WGPU_RENDER_PIPELINE_DESCRIPTOR_INIT;
+    pipeDesc.vertex = vertState;
+    pipeDesc.fragment = &fragState;
+    pipeDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+    
+    WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(app.device(), &pipeDesc);
+
     bool running = true;
     while (running) {
         SDL_Event event;
