@@ -75,6 +75,8 @@ int main() try {
         passDesc.colorAttachments = &passAtt;
 
         WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(enc, &passDesc);
+        wgpuRenderPassEncoderSetPipeline(pass, pipeline);
+        wgpuRenderPassEncoderDraw(pass, 3, 1, 0, 0);
         wgpuRenderPassEncoderEnd(pass);
 
         WGPUCommandBufferDescriptor bufDesc = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
