@@ -111,12 +111,12 @@ int main() try {
         WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDescriptor);
 
         wgpuRenderPassEncoderSetPipeline(renderPass, renderPipeline);
-        float s = sin(time / 10), c = cos(time / 10);
+        float s = sin(time / 10), c = cos(time / 10), x = s * 0.5, y = c * 0.5;
         float mat[16] = {
             0.5f * c, 0.5f * s, 0, 0,
             -0.5f * s, 0.5f * c, 0, 0, 
             0, 0, 1, 0,
-            0, 0, 0, 1
+            x, y, 0, 1
         };
         wgpuRenderPassEncoderSetImmediates(renderPass, 0, &mat, sizeof(mat));
         wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
