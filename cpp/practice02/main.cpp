@@ -27,7 +27,7 @@ WGPUShaderModule createShaderModule(WGPUDevice device, std::filesystem::path con
 WGPURenderPipeline createPipeline(WGPUDevice device, WGPUShaderModule shaderModule,
                                   WGPUTextureFormat surfaceFormat) {
     WGPUPipelineLayoutDescriptor pipelineLayoutDescriptor = WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT;
-    pipelineLayoutDescriptor.immediateSize = 64;
+    pipelineLayoutDescriptor.immediateSize = 128;
 
     WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDescriptor);
 
@@ -112,13 +112,21 @@ int main() try {
 
         wgpuRenderPassEncoderSetPipeline(renderPass, renderPipeline);
         float s = sin(time / 10), c = cos(time / 10), x = s * 0.5, y = c * 0.5;
-        float mat[16] = {
+        float matTrans[16] = {
             0.5f * c, 0.5f * s, 0, 0,
             -0.5f * s, 0.5f * c, 0, 0, 
             0, 0, 1, 0,
             x, y, 0, 1
         };
-        wgpuRenderPassEncoderSetImmediates(renderPass, 0, &mat, sizeof(mat));
+        float asp_rat = float(app.width()) / float(app.height());
+        float matView[16] = {
+            1.0f / asp_rat, 0, 0, 0,
+            0, 1, 0, 0, 
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        };
+        wgpuRenderPassEncoderSetImmediates(renderPass, 0, &matTrans, sizeof(matTrans));
+        wgpuRenderPassEncoderSetImmediates(renderPass, sizeof(matTrans), &matView, sizeof(matView));
         wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);

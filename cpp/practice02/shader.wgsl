@@ -17,12 +17,13 @@ const COLORS = array<vec4f, 3>(
 
 struct Immediates {
     transform: mat4x4f,
+    view: mat4x4f,
 }
 var<immediate> immediates: Immediates;
 
 @vertex
 fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOut {
-    return VertexOut(immediates.transform * vec4f(POSITIONS[vertexIndex], 0.0, 1.0),
+    return VertexOut(immediates.view * immediates.transform * vec4f(POSITIONS[vertexIndex], 0.0, 1.0),
         COLORS[vertexIndex]
     );
 }
