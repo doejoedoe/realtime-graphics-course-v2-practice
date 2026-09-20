@@ -26,6 +26,7 @@ WGPUShaderModule createShaderModule(WGPUDevice device, std::filesystem::path con
 WGPURenderPipeline createPipeline(WGPUDevice device, WGPUShaderModule shaderModule,
                                   WGPUTextureFormat surfaceFormat) {
     WGPUPipelineLayoutDescriptor pipelineLayoutDescriptor = WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT;
+    pipelineLayoutDescriptor.immediateSize = 4;
 
     WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDescriptor);
 
@@ -109,6 +110,8 @@ int main() try {
         WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDescriptor);
 
         wgpuRenderPassEncoderSetPipeline(renderPass, renderPipeline);
+        float scale = 0.5;
+        wgpuRenderPassEncoderSetImmediates(renderPass, 0, &scale, sizeof(scale));
         wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);
