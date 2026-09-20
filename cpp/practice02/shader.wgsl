@@ -16,18 +16,13 @@ const COLORS = array<vec4f, 3>(
 );
 
 struct Immediates {
-    scale: f32,
-    angle: f32,
+    transform: mat4x4f,
 }
 var<immediate> immediates: Immediates;
 
 @vertex
 fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOut {
-    let s = sin(immediates.angle);
-    let c = cos(immediates.angle);
-    let pos = POSITIONS[vertexIndex] * immediates.scale;
-    let posRot = vec2<f32>(pos.x * c - pos.y * s, pos.x * s + pos.y * c);
-    return VertexOut(vec4f(posRot, 0.0, 1.0),
+    return VertexOut(immediates.transform * vec4f(POSITIONS[vertexIndex], 0.0, 1.0),
         COLORS[vertexIndex]
     );
 }
