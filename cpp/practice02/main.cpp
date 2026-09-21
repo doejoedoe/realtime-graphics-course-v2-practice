@@ -64,6 +64,7 @@ int main() try {
     float time = 0.f;
 
     std::unordered_set<SDL_Keycode> keydown;
+    float x = 0, y = 0;
 
     bool running = true;
     while (running) {
@@ -111,7 +112,11 @@ int main() try {
         WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDescriptor);
 
         wgpuRenderPassEncoderSetPipeline(renderPass, renderPipeline);
-        float s = sin(time / 10), c = cos(time / 10), x = s * 0.5, y = c * 0.5;
+        float s = sin(time / 10), c = cos(time / 10);
+        if(keydown.contains(SDLK_LEFT)) x -= dt;
+        if(keydown.contains(SDLK_RIGHT)) x += dt;
+        if(keydown.contains(SDLK_DOWN)) y -= dt;
+        if(keydown.contains(SDLK_UP)) y += dt;
         float matTrans[16] = {
             0.5f * c, 0.5f * s, 0, 0,
             -0.5f * s, 0.5f * c, 0, 0, 
@@ -127,7 +132,7 @@ int main() try {
         };
         wgpuRenderPassEncoderSetImmediates(renderPass, 0, &matTrans, sizeof(matTrans));
         wgpuRenderPassEncoderSetImmediates(renderPass, sizeof(matTrans), &matView, sizeof(matView));
-        wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
+        wgpuRenderPassEncoderDraw(renderPass, 18, 1, 0, 0);
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);
 

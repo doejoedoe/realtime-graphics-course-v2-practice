@@ -3,16 +3,56 @@ struct VertexOut {
     @location(0) color: vec4f,
 }
 
-const POSITIONS = array<vec2f, 3>(
+const POSITIONS = array<vec2f, 18>(
+    vec2f(0.0, 0.0),
     vec2f(0.0, 1.0),
+    vec2f(-sqrt(0.75), 0.5),
+
+    vec2f(0.0, 0.0),
+    vec2f(-sqrt(0.75), 0.5),
     vec2f(-sqrt(0.75), -0.5),
-    vec2f( sqrt(0.75), -0.5),
+
+    vec2f(0.0, 0.0),
+    vec2f(-sqrt(0.75), -0.5),
+    vec2f(0.0, -1.0),
+    
+    vec2f(0.0, 0.0),
+    vec2f(0.0, -1.0),
+    vec2f(sqrt(0.75), -0.5),
+
+    vec2f(0.0, 0.0),
+    vec2f(sqrt(0.75), -0.5),
+    vec2f(sqrt(0.75), 0.5),
+    
+    vec2f(0.0, 0.0),
+    vec2f(sqrt(0.75), 0.5),
+    vec2f(0.0, 1.0),
 );
 
-const COLORS = array<vec4f, 3>(
+const COLORS = array<vec4f, 18>(
+    vec4f(1.00, 1.0, 1.0, 1.0),
     vec4f(1.00, 0.29, 0.29, 1.0),
     vec4f(0.16, 0.72, 0.79, 1.0),
+
+    vec4f(1.00, 1.0, 1.0, 1.0),
+    vec4f(0.16, 0.72, 0.79, 1.0),
     vec4f(1.00, 0.84, 0.40, 1.0),
+
+    vec4f(1.00, 1.0, 1.0, 1.0),
+    vec4f(1.00, 0.84, 0.40, 1.0),
+    vec4f(1.00, 0.29, 0.29, 1.0),
+    
+    vec4f(1.00, 1.0, 1.0, 1.0),
+    vec4f(1.00, 0.29, 0.29, 1.0),
+    vec4f(0.16, 0.72, 0.79, 1.0),
+
+    vec4f(1.00, 1.0, 1.0, 1.0),
+    vec4f(0.16, 0.72, 0.79, 1.0),
+    vec4f(1.00, 0.84, 0.40, 1.0),
+
+    vec4f(1.00, 1.0, 1.0, 1.0),
+    vec4f(1.00, 0.84, 0.40, 1.0),
+    vec4f(1.00, 0.29, 0.29, 1.0),
 );
 
 struct Immediates {
