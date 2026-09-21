@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <iostream>
 #include <unordered_set>
+#include <cmath>
 
 static std::filesystem::path const projectRoot = PROJECT_ROOT;
 
@@ -26,6 +27,7 @@ WGPUShaderModule createShaderModule(WGPUDevice device, std::filesystem::path con
 WGPURenderPipeline createPipeline(WGPUDevice device, WGPUShaderModule shaderModule,
                                   WGPUTextureFormat surfaceFormat) {
     WGPUPipelineLayoutDescriptor pipelineLayoutDescriptor = WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT;
+    pipelineLayoutDescriptor.immediateSize = 128;
 
     WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDescriptor);
 
@@ -62,6 +64,7 @@ int main() try {
     float time = 0.f;
 
     std::unordered_set<SDL_Keycode> keydown;
+    float x = 0, y = 0;
 
     bool running = true;
     while (running) {
@@ -109,7 +112,27 @@ int main() try {
         WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDescriptor);
 
         wgpuRenderPassEncoderSetPipeline(renderPass, renderPipeline);
-        wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
+        float s = sin(time / 10), c = cos(time / 10);
+        if(keydown.contains(SDLK_LEFT)) x -= dt;
+        if(keydown.contains(SDLK_RIGHT)) x += dt;
+        if(keydown.contains(SDLK_DOWN)) y -= dt;
+        if(keydown.contains(SDLK_UP)) y += dt;
+        float matTrans[16] = {
+            0.5f * c, 0.5f * s, 0, 0,
+            -0.5f * s, 0.5f * c, 0, 0, 
+            0, 0, 1, 0,
+            x, y, 0, 1
+        };
+        float asp_rat = float(app.width()) / float(app.height());
+        float matView[16] = {
+            1.0f / asp_rat, 0, 0, 0,
+            0, 1, 0, 0, 
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        };
+        wgpuRenderPassEncoderSetImmediates(renderPass, 0, &matTrans, sizeof(matTrans));
+        wgpuRenderPassEncoderSetImmediates(renderPass, sizeof(matTrans), &matView, sizeof(matView));
+        wgpuRenderPassEncoderDraw(renderPass, 18, 1, 0, 0);
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);
 
