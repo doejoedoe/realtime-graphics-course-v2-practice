@@ -75,12 +75,25 @@ WGPURenderPipeline createPipeline(WGPUDevice device, WGPUShaderModule shaderModu
     fragmentState.targetCount = 1;
     fragmentState.targets = &colorTargetState;
 
+    WGPUVertexAttribute attrs[2] = {
+        {nullptr, WGPUVertexFormat_Float32x2, offsetof(vertex, position), 0},
+        {nullptr, WGPUVertexFormat_Unorm8x4, offsetof(vertex, color), 1},
+    };
+
+    WGPUVertexBufferLayout vertexBufferLayout = WGPU_VERTEX_BUFFER_LAYOUT_INIT;
+    vertexBufferLayout.arrayStride = sizeof(vertex);
+    vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
+    vertexBufferLayout.attributeCount = 2;
+    vertexBufferLayout.attributes = attrs;
+
     WGPURenderPipelineDescriptor renderPipelineDescriptor = WGPU_RENDER_PIPELINE_DESCRIPTOR_INIT;
     renderPipelineDescriptor.layout = pipelineLayout;
     renderPipelineDescriptor.vertex.module = shaderModule;
     renderPipelineDescriptor.vertex.entryPoint = {"vertexMain", WGPU_STRLEN};
     renderPipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
     renderPipelineDescriptor.fragment = &fragmentState;
+    renderPipelineDescriptor.vertex.bufferCount = 1;
+    renderPipelineDescriptor.vertex.buffers = &vertexBufferLayout;
 
     WGPURenderPipeline renderPipeline = wgpuDeviceCreateRenderPipeline(device, &renderPipelineDescriptor);
     wgpuPipelineLayoutRelease(pipelineLayout);
@@ -179,6 +192,7 @@ int main() try {
 
         wgpuRenderPassEncoderSetPipeline(renderPass, renderPipeline);
         wgpuRenderPassEncoderSetImmediates(renderPass, 0, viewMatrix, sizeof(viewMatrix));
+        wgpuRenderPassEncoderSetVertexBuffer(renderPass,0, vertBuff, 0, WGPU_WHOLE_SIZE);
         wgpuRenderPassEncoderDraw(renderPass, vertices.size(), 1, 0, 0);
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);
