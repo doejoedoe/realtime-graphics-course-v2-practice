@@ -90,7 +90,7 @@ WGPURenderPipeline createPipeline(WGPUDevice device, WGPUShaderModule shaderModu
     renderPipelineDescriptor.layout = pipelineLayout;
     renderPipelineDescriptor.vertex.module = shaderModule;
     renderPipelineDescriptor.vertex.entryPoint = {"vertexMain", WGPU_STRLEN};
-    renderPipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+    renderPipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_LineStrip;
     renderPipelineDescriptor.fragment = &fragmentState;
     renderPipelineDescriptor.vertex.bufferCount = 1;
     renderPipelineDescriptor.vertex.buffers = &vertexBufferLayout;
@@ -99,6 +99,16 @@ WGPURenderPipeline createPipeline(WGPUDevice device, WGPUShaderModule shaderModu
     wgpuPipelineLayoutRelease(pipelineLayout);
 
     return renderPipeline;
+}
+
+WGPUBuffer createBuffer(WGPUDevice device, WGPUQueue queue, std::vector<vertex>& vertices) {
+    WGPUBufferDescriptor buffDesc = WGPU_BUFFER_DESCRIPTOR_INIT;
+    buffDesc.size = vertices.size() * sizeof(vertex);
+    buffDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
+
+    WGPUBuffer vertBuff = wgpuDeviceCreateBuffer(device, &buffDesc);
+    wgpuQueueWriteBuffer(queue, vertBuff, 0, vertices.data(), vertices.size() * sizeof(vertex));
+    return vertBuff;
 }
 
 int main() try {
@@ -110,20 +120,11 @@ int main() try {
     auto lastFrameStart = std::chrono::high_resolution_clock::now();
     float time = 0.f;
 
-    std::vector<vertex> vertices = {
-        {{50.0f, 50.0f}, {125, 207, 182, 255}},
-        {{100.0f, 50.0f}, {251, 209, 162, 255}},
-        {{50.0f, 100.0f}, {247, 146,  86, 255}},
-    };
+    std::vector<vertex> vertices = {};
+    WGPUBuffer vertBuff = nullptr;
+    bool vertChanged = false;
 
     math::vector2f mouse{0.f, 0.f};
-
-    WGPUBufferDescriptor buffDesc = WGPU_BUFFER_DESCRIPTOR_INIT;
-    buffDesc.size = vertices.size() * sizeof(vertex);
-    buffDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
-
-    WGPUBuffer vertBuff = wgpuDeviceCreateBuffer(app.device(), &buffDesc);
-    wgpuQueueWriteBuffer(app.queue(), vertBuff, 0, vertices.data(), vertices.size() * sizeof(vertex));
 
     bool running = true;
     while (running) {
@@ -150,12 +151,30 @@ int main() try {
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
                 if (event.button.button == SDL_BUTTON_LEFT) {
                     // Нажата левая кнопка
+                    vertices.push_back({
+                        {event.button.x * app.pixelDensity(), event.button.y * app.pixelDensity()}, 
+                        {125, 207, 182, 255}
+                    });
+                    vertChanged = true;
                 }
                 if (event.button.button == SDL_BUTTON_RIGHT) {
                     // Нажата правая кнопка
+                    if (!vertices.empty()) {
+                        vertices.pop_back();
+                        vertChanged = true;
+                    }
                 }
                 break;
             }
+        }
+
+        if(vertChanged) {
+            if(vertBuff) {
+                wgpuBufferRelease(vertBuff);
+                vertBuff = nullptr;
+            }
+            vertBuff = createBuffer(app.device(), app.queue(), vertices);
+            vertChanged = false;
         }
 
         std::optional<WGPUSurfaceTexture> surfaceTexture = app.beginFrame();
@@ -192,8 +211,10 @@ int main() try {
 
         wgpuRenderPassEncoderSetPipeline(renderPass, renderPipeline);
         wgpuRenderPassEncoderSetImmediates(renderPass, 0, viewMatrix, sizeof(viewMatrix));
-        wgpuRenderPassEncoderSetVertexBuffer(renderPass,0, vertBuff, 0, WGPU_WHOLE_SIZE);
-        wgpuRenderPassEncoderDraw(renderPass, vertices.size(), 1, 0, 0);
+        if (vertBuff && vertices.size() >= 2) {
+            wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, vertBuff, 0, WGPU_WHOLE_SIZE);
+            wgpuRenderPassEncoderDraw(renderPass, vertices.size(), 1, 0, 0);
+        }
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);
 
@@ -209,7 +230,9 @@ int main() try {
         wgpuTextureRelease(surfaceTexture->texture);
     }
 
-    wgpuBufferRelease(vertBuff);
+    if(vertBuff) {
+        wgpuBufferRelease(vertBuff);
+    }
     wgpuRenderPipelineRelease(renderPipeline);
     wgpuShaderModuleRelease(shaderModule);
 } catch (const std::exception &e) {
