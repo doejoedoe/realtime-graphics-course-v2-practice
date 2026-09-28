@@ -121,8 +121,11 @@ int main() try {
     float time = 0.f;
 
     std::vector<vertex> vertices = {};
+    std::vector<vertex> bezierVertices = {};
     WGPUBuffer vertBuff = nullptr;
+    WGPUBuffer bezierBuff = nullptr;
     bool vertChanged = false;
+    int quality = 4;
 
     math::vector2f mouse{0.f, 0.f};
 
@@ -175,6 +178,22 @@ int main() try {
             }
             vertBuff = createBuffer(app.device(), app.queue(), vertices);
             vertChanged = false;
+
+            bezierVertices.clear();
+            if(vertices.size() >= 2) {
+                int segments = (vertices.size() - 1) * quality;
+                for(int i = 0; i <= segments; i++) {
+                    float t = (float)i / (float)segments;
+                    vertex b = bezier(vertices, t);
+                    b.color = {255, 255, 0, 255};
+                    bezierVertices.push_back(b);
+                }
+            }
+            if (bezierBuff) {
+                wgpuBufferRelease(bezierBuff);
+                bezierBuff = nullptr;
+            }
+            bezierBuff = createBuffer(app.device(), app.queue(), bezierVertices);
         }
 
         std::optional<WGPUSurfaceTexture> surfaceTexture = app.beginFrame();
@@ -215,6 +234,10 @@ int main() try {
             wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, vertBuff, 0, WGPU_WHOLE_SIZE);
             wgpuRenderPassEncoderDraw(renderPass, vertices.size(), 1, 0, 0);
         }
+        if(bezierBuff && bezierVertices.size() >= 2) {
+            wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, bezierBuff, 0, WGPU_WHOLE_SIZE);
+            wgpuRenderPassEncoderDraw(renderPass, bezierVertices.size(), 1, 0, 0);
+        }
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);
 
@@ -232,6 +255,9 @@ int main() try {
 
     if(vertBuff) {
         wgpuBufferRelease(vertBuff);
+    }
+    if(bezierBuff) {
+        wgpuBufferRelease(bezierBuff);
     }
     wgpuRenderPipelineRelease(renderPipeline);
     wgpuShaderModuleRelease(shaderModule);
