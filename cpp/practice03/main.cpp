@@ -105,6 +105,13 @@ int main() try {
 
     math::vector2f mouse{0.f, 0.f};
 
+    WGPUBufferDescriptor buffDesc = WGPU_BUFFER_DESCRIPTOR_INIT;
+    buffDesc.size = vertices.size() * sizeof(vertex);
+    buffDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
+
+    WGPUBuffer vertBuff = wgpuDeviceCreateBuffer(app.device(), &buffDesc);
+    wgpuQueueWriteBuffer(app.queue(), vertBuff, 0, vertices.data(), vertices.size() * sizeof(vertex));
+
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -188,6 +195,7 @@ int main() try {
         wgpuTextureRelease(surfaceTexture->texture);
     }
 
+    wgpuBufferRelease(vertBuff);
     wgpuRenderPipelineRelease(renderPipeline);
     wgpuShaderModuleRelease(shaderModule);
 } catch (const std::exception &e) {
