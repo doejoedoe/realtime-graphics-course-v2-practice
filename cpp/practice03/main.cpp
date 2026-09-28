@@ -75,17 +75,40 @@ WGPURenderPipeline createPipeline(WGPUDevice device, WGPUShaderModule shaderModu
     fragmentState.targetCount = 1;
     fragmentState.targets = &colorTargetState;
 
+    WGPUVertexAttribute attrs[2] = {
+        {nullptr, WGPUVertexFormat_Float32x2, offsetof(vertex, position), 0},
+        {nullptr, WGPUVertexFormat_Unorm8x4, offsetof(vertex, color), 1},
+    };
+
+    WGPUVertexBufferLayout vertexBufferLayout = WGPU_VERTEX_BUFFER_LAYOUT_INIT;
+    vertexBufferLayout.arrayStride = sizeof(vertex);
+    vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
+    vertexBufferLayout.attributeCount = 2;
+    vertexBufferLayout.attributes = attrs;
+
     WGPURenderPipelineDescriptor renderPipelineDescriptor = WGPU_RENDER_PIPELINE_DESCRIPTOR_INIT;
     renderPipelineDescriptor.layout = pipelineLayout;
     renderPipelineDescriptor.vertex.module = shaderModule;
     renderPipelineDescriptor.vertex.entryPoint = {"vertexMain", WGPU_STRLEN};
-    renderPipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+    renderPipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_LineStrip;
     renderPipelineDescriptor.fragment = &fragmentState;
+    renderPipelineDescriptor.vertex.bufferCount = 1;
+    renderPipelineDescriptor.vertex.buffers = &vertexBufferLayout;
 
     WGPURenderPipeline renderPipeline = wgpuDeviceCreateRenderPipeline(device, &renderPipelineDescriptor);
     wgpuPipelineLayoutRelease(pipelineLayout);
 
     return renderPipeline;
+}
+
+WGPUBuffer createBuffer(WGPUDevice device, WGPUQueue queue, std::vector<vertex>& vertices) {
+    WGPUBufferDescriptor buffDesc = WGPU_BUFFER_DESCRIPTOR_INIT;
+    buffDesc.size = vertices.size() * sizeof(vertex);
+    buffDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
+
+    WGPUBuffer vertBuff = wgpuDeviceCreateBuffer(device, &buffDesc);
+    wgpuQueueWriteBuffer(queue, vertBuff, 0, vertices.data(), vertices.size() * sizeof(vertex));
+    return vertBuff;
 }
 
 int main() try {
@@ -97,11 +120,13 @@ int main() try {
     auto lastFrameStart = std::chrono::high_resolution_clock::now();
     float time = 0.f;
 
-    std::vector<vertex> vertices = {
-        {{0.0f, 0.0f}, {125, 207, 182, 255}},
-        {{0.5f, 0.0f}, {251, 209, 162, 255}},
-        {{0.0f, 0.5f}, {247, 146,  86, 255}},
-    };
+    std::vector<vertex> vertices = {};
+    std::vector<vertex> bezierVertices = {};
+    WGPUBuffer vertBuff = nullptr;
+    WGPUBuffer bezierBuff = nullptr;
+    bool vertChanged = false;
+    bool bezierChanged = false;
+    int quality = 4;
 
     math::vector2f mouse{0.f, 0.f};
 
@@ -119,9 +144,15 @@ int main() try {
             case SDL_EVENT_KEY_DOWN:
                 if (event.key.key == SDLK_LEFT) {
                     // Нажата клавиша влево
+                    if(quality > 1) {
+                        quality--;
+                        bezierChanged = true;
+                    }
                 }
                 if (event.key.key == SDLK_RIGHT) {
                     // Нажата клавиша вправо
+                    quality++;
+                    bezierChanged = true;
                 }
                 break;
             case SDL_EVENT_MOUSE_MOTION:
@@ -130,12 +161,51 @@ int main() try {
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
                 if (event.button.button == SDL_BUTTON_LEFT) {
                     // Нажата левая кнопка
+                    vertices.push_back({
+                        {event.button.x * app.pixelDensity(), event.button.y * app.pixelDensity()}, 
+                        {125, 207, 182, 255}
+                    });
+                    vertChanged = true;
+                    bezierChanged = true;
                 }
                 if (event.button.button == SDL_BUTTON_RIGHT) {
                     // Нажата правая кнопка
+                    if (!vertices.empty()) {
+                        vertices.pop_back();
+                        vertChanged = true;
+                        bezierChanged = true;
+                    }
                 }
                 break;
             }
+        }
+
+        if(vertChanged) {
+            if(vertBuff) {
+                wgpuBufferRelease(vertBuff);
+                vertBuff = nullptr;
+            }
+            vertBuff = createBuffer(app.device(), app.queue(), vertices);
+            vertChanged = false;
+        }
+
+        if(bezierChanged) {
+            bezierVertices.clear();
+            if(vertices.size() >= 2) {
+                int segments = (vertices.size() - 1) * quality;
+                for(int i = 0; i <= segments; i++) {
+                    float t = (float)i / (float)segments;
+                    vertex b = bezier(vertices, t);
+                    b.color = {255, 255, 0, 255};
+                    bezierVertices.push_back(b);
+                }
+            }
+            if (bezierBuff) {
+                wgpuBufferRelease(bezierBuff);
+                bezierBuff = nullptr;
+            }
+            bezierBuff = createBuffer(app.device(), app.queue(), bezierVertices);
+            bezierChanged = false;
         }
 
         std::optional<WGPUSurfaceTexture> surfaceTexture = app.beginFrame();
@@ -149,10 +219,10 @@ int main() try {
         lastFrameStart = now;
 
         float const viewMatrix[16] = {
-            1.f, 0.f, 0.f, 0.f,
-            0.f, 1.f, 0.f, 0.f,
+            2.f / (float)app.width(), 0.f, 0.f, 0.f,
+            0.f, -2.f / (float)app.height(), 0.f, 0.f,
             0.f, 0.f, 1.f, 0.f,
-            0.f, 0.f, 0.f, 1.f,
+            -1.f, 1.f, 0.f, 1.f,
         };
 
         WGPUTextureView targetView = wgpuTextureCreateView(surfaceTexture->texture, nullptr);
@@ -172,7 +242,14 @@ int main() try {
 
         wgpuRenderPassEncoderSetPipeline(renderPass, renderPipeline);
         wgpuRenderPassEncoderSetImmediates(renderPass, 0, viewMatrix, sizeof(viewMatrix));
-        wgpuRenderPassEncoderDraw(renderPass, vertices.size(), 1, 0, 0);
+        if (vertBuff && vertices.size() >= 2) {
+            wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, vertBuff, 0, WGPU_WHOLE_SIZE);
+            wgpuRenderPassEncoderDraw(renderPass, vertices.size(), 1, 0, 0);
+        }
+        if(bezierBuff && bezierVertices.size() >= 2) {
+            wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, bezierBuff, 0, WGPU_WHOLE_SIZE);
+            wgpuRenderPassEncoderDraw(renderPass, bezierVertices.size(), 1, 0, 0);
+        }
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);
 
@@ -188,6 +265,12 @@ int main() try {
         wgpuTextureRelease(surfaceTexture->texture);
     }
 
+    if(vertBuff) {
+        wgpuBufferRelease(vertBuff);
+    }
+    if(bezierBuff) {
+        wgpuBufferRelease(bezierBuff);
+    }
     wgpuRenderPipelineRelease(renderPipeline);
     wgpuShaderModuleRelease(shaderModule);
 } catch (const std::exception &e) {
