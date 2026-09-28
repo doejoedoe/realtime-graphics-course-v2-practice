@@ -125,6 +125,7 @@ int main() try {
     WGPUBuffer vertBuff = nullptr;
     WGPUBuffer bezierBuff = nullptr;
     bool vertChanged = false;
+    bool bezierChanged = false;
     int quality = 4;
 
     math::vector2f mouse{0.f, 0.f};
@@ -143,9 +144,15 @@ int main() try {
             case SDL_EVENT_KEY_DOWN:
                 if (event.key.key == SDLK_LEFT) {
                     // Нажата клавиша влево
+                    if(quality > 1) {
+                        quality--;
+                        bezierChanged = true;
+                    }
                 }
                 if (event.key.key == SDLK_RIGHT) {
                     // Нажата клавиша вправо
+                    quality++;
+                    bezierChanged = true;
                 }
                 break;
             case SDL_EVENT_MOUSE_MOTION:
@@ -159,12 +166,14 @@ int main() try {
                         {125, 207, 182, 255}
                     });
                     vertChanged = true;
+                    bezierChanged = true;
                 }
                 if (event.button.button == SDL_BUTTON_RIGHT) {
                     // Нажата правая кнопка
                     if (!vertices.empty()) {
                         vertices.pop_back();
                         vertChanged = true;
+                        bezierChanged = true;
                     }
                 }
                 break;
@@ -178,7 +187,9 @@ int main() try {
             }
             vertBuff = createBuffer(app.device(), app.queue(), vertices);
             vertChanged = false;
+        }
 
+        if(bezierChanged) {
             bezierVertices.clear();
             if(vertices.size() >= 2) {
                 int segments = (vertices.size() - 1) * quality;
@@ -194,6 +205,7 @@ int main() try {
                 bezierBuff = nullptr;
             }
             bezierBuff = createBuffer(app.device(), app.queue(), bezierVertices);
+            bezierChanged = false;
         }
 
         std::optional<WGPUSurfaceTexture> surfaceTexture = app.beginFrame();
